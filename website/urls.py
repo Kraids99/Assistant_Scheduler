@@ -1,12 +1,8 @@
-from flask import Blueprint, render_template, request, send_file, session
+from flask import Blueprint, render_template, request, send_file
 import os
 from .utils import read_file, find_asisten, find_patners, all_schedules
-from werkzeug.utils import secure_filename
 
 urls = Blueprint('web', __name__)
-
-UPLOAD_FOLDER = 'uploads/'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @urls.route('/', methods=['GET'])
 def index():
