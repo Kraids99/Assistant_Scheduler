@@ -12,10 +12,6 @@ def read_file(input_file):
 
 
 def find_asisten(input_file, nama_asisten):
-    """
-    Cek apakah nama asisten ada di salah satu tabel Word.
-    Return True jika ditemukan, False kalau tidak.
-    """
     for table in input_file.tables:
         for row in table.rows:
             row_text = " ".join(cell.text.strip().lower() for cell in row.cells)
@@ -26,7 +22,6 @@ def find_asisten(input_file, nama_asisten):
 bulan_pattern = re.compile(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)", re.IGNORECASE)
 
 def all_schedules(input_file):
-    """Bangun daftar jadwal untuk semua asisten."""
     all_schedules = []
     bulan_pattern = re.compile(
         r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|"
@@ -79,7 +74,6 @@ def all_schedules(input_file):
     return all_schedules
 
 def find_patners(all_schedules, target_name):
-    """Cari patner untuk 1 asisten berdasar ruangan & sesi yang sama."""
     target = next((a for a in all_schedules if a["nama"].lower() == target_name.lower()), None)
     if not target:
         return []
