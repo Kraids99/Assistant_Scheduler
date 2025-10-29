@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistant Scheduler</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+        }
+
+        form {
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        input[type="file"], input[type="text"] {
+            padding: 8px;
+            margin: 10px;
+            border: 1px solid grey;
+            border-radius: 6px;
+            width: 250px;
+        }
+
+        button {
+            background: lightblue;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 6px;
+        }
+
+        table {
+            border-collapse: collapse;
+            margin: 30px auto;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            border: 1px solid grey;
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        th {
+            background: lightblue;
+            color: black;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Assistant Scheduler</h1>
+
+    <form method="POST" action="/proses" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".docx" required><br>
+        <input type="text" name="nama_asisten" placeholder="Masukkan nama asisten" required><br>
+        <button type="submit">Tampilkan Jadwal</button>
+    </form>
+
+    {% if cekAsisten %}
+        <h2>Jadwal Ngawas {{ nama }}</h2>
+
+        <table>
+            <tr>
+                <th>Sesi/Tanggal</th>
+                {% for j in jadwal %}
+                    <th>{{ j.tanggal }}</th>
+                {% endfor %}
+            </tr>
+
+            {% for s_idx in range(4) %}
+                <tr>
+                    <td>{{ s_idx + 1 }}</td>
+                    {% for j in jadwal %}
+                        <td>{{ j.sesi[s_idx] }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+
+        {% if patners %}
+            <h2 style="margin-top:40px;">Daftar Patners</h2>
+            <table>
+                <tr>
+                    <th>Ruangan</th>
+                    <th>Patners</th>
+                </tr>
+                {% for p in patners %}
+                    <tr>
+                        <td>{{ p.ruangan }}</td>
+                        <td>
+                            {% if p.patners[0] == "-" %}
+                                -
+                            {% else %}
+                                {{ ", ".join(p.patners) }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+        {% endif %}
+    {% endif %}
+    
+    </body>
+</html>
