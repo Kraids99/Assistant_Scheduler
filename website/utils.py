@@ -1,6 +1,10 @@
 from docx import Document
 import io
+from io import BytesIO
 import re
+import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 def read_file(input_file):
     name = input_file.filename.lower()
@@ -101,6 +105,99 @@ def find_patners(all_schedules, target_name):
             })
 
     return hasil
+
+def generate_excel(jadwal, patners, nama):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Jadwal Ngawas"
+
+    # === Style setup ===
+    fill_header = PatternFill("solid", fgColor="DCE6F1")
+    fill_sesi = PatternFill("solid", fgColor="FCE4D6")
+    border_medium = Border(
+        left=Side(style="medium", color="000000"),
+        right=Side(style="medium", color="000000"),
+        top=Side(style="medium", color="000000"),
+        bottom=Side(style="medium", color="000000")
+    )
+    center = Alignment(horizontal="center", vertical="center")
+
+    # === Dinamis: jumlah kolom berdasarkan tanggal ===
+    total_tanggal = len(jadwal)
+    total_kolom = total_tanggal + 1  # kolom pertama = Sesi/Tanggal
+    last_col_letter = get_column_letter(total_kolom)
+
+    # === Judul utama ===
+    ws.merge_cells(f"A1:{last_col_letter}1")
+    ws["A1"] = f"Jadwal Ngawas {nama.title()}"
+    ws["A1"].font = Font(size=14, bold=True)
+    ws["A1"].alignment = center
+
+    # === Header jadwal ===
+    ws["A2"] = "Sesi / Tanggal"
+    ws["A2"].fill = fill_header
+    ws["A2"].font = Font(bold=True)
+    ws["A2"].alignment = center
+    ws["A2"].border = border_medium
+
+    for i, j in enumerate(jadwal, start=2):
+        c = ws.cell(row=2, column=i, value=j["tanggal"])
+        c.fill = fill_header
+        c.font = Font(bold=True)
+        c.alignment = center
+        c.border = border_medium
+
+    # === Isi jadwal ===
+    for s_idx in range(4):
+        sesi_cell = ws.cell(row=3 + s_idx, column=1, value=f"{s_idx + 1}")
+        sesi_cell.fill = fill_sesi
+        sesi_cell.border = border_medium
+        sesi_cell.alignment = center
+        for c_idx, j in enumerate(jadwal, start=2):
+            val = j["sesi"][s_idx]
+            cell = ws.cell(row=3 + s_idx, column=c_idx, value=val)
+            cell.border = border_medium
+            cell.alignment = center
+
+    # === Tabel Patners (di bawah jadwal) ===
+    start_row = 4 + 2 + 3  # jeda 3 baris di bawah tabel jadwal
+    ws.merge_cells(f"A{start_row}:D{start_row}")
+    ws[f"A{start_row}"] = "Daftar Patners"
+    ws[f"A{start_row}"].font = Font(bold=True, size=12)
+    ws[f"A{start_row}"].alignment = center
+
+    ws[f"A{start_row+1}"] = "Ruangan"
+    ws.merge_cells(f"B{start_row+1}:D{start_row+1}")
+    ws[f"B{start_row+1}"] = "Patners"
+    for col in ["A", "B", "c", "D"]:
+        cell = ws[f"{col}{start_row+1}"]
+        cell.fill = fill_header
+        cell.font = Font(bold=True)
+        cell.alignment = center
+        cell.border = border_medium
+
+    for i, p in enumerate(patners, start=start_row + 2):
+        ws[f"A{i}"] = p["ruangan"]
+        ws[f"A{i}"].fill = fill_sesi
+        ws.merge_cells(f"B{i}:D{i}")
+        ws[f"B{i}"] = ", ".join(p["patners"]) if p["patners"][0] != "-" else "-"
+        for col in ["A", "B", "C", "D"]:
+            cell = ws[f"{col}{i}"]
+            cell.border = border_medium
+            cell.alignment = center
+
+    # === Lebar kolom otomatis ===
+    for col in range(1, total_kolom + 1):
+        letter = get_column_letter(col)
+        ws.column_dimensions[letter].width = 14
+
+    ws.column_dimensions["A"].width = 20
+    ws.column_dimensions["B"].width = 50
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 
 # def schedule_table(input_file, nama_asisten):
 #     """

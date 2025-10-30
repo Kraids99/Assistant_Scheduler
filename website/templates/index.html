@@ -38,7 +38,7 @@
         }
 
         th, td {
-            border: 1px solid grey;
+            border: 1px solid black;
             padding: 8px 12px;
             text-align: center;
         }
@@ -54,15 +54,15 @@
     <h1>Assistant Scheduler</h1>
     <a href=https://www.ilovepdf.com/id/pdf-ke-word>convert pdf to word?</a> 
     <form method="POST" action="/proses" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".docx" required><br>
+        <input type="file" name="file" accept=".docx"><br>
         <input type="text" name="nama_asisten" placeholder="Masukkan nama asisten" required><br>
         <button type="submit">Tampilkan Jadwal</button>
-    </form>
+    
 
     {% if cekAsisten %}
         <h2>Jadwal Ngawas {{ nama }}</h2>
 
-        <table>
+        <table id="jadwalTable">
             <tr>
                 <th>Sesi/Tanggal</th>
                 {% for j in jadwal %}
@@ -82,7 +82,7 @@
 
         {% if patners %}
             <h2 style="margin-top:40px;">Daftar Patners</h2>
-            <table>
+            <table id="patnerTable">
                 <tr>
                     <th>Ruangan</th>
                     <th>Patners</th>
@@ -101,7 +101,72 @@
                 {% endfor %}
             </table>
         {% endif %}
+        <button onclick="downloadPNG()">Download Jadwal sebagai PNG</button>
+        <button onclick="downloadExcel()">Download Excel</button>      
     {% endif %}
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
+    <script>
+        const nama = `{{ nama }}`;
+        const jadwal = JSON.parse(`{{ jadwal | tojson | safe }}`);
+        const patners = JSON.parse(`{{ patners | tojson | safe }}`);
+
+        function downloadPNG() {
+            const jadwalTable = document.querySelector('#jadwalTable');
+            const patnerTable = document.querySelector('#patnerTable');
+
+            // buat container kosong sementara
+            const container = document.createElement('div');
+            container.style.background = 'white';
+            container.style.padding = '20px';
+            container.style.textAlign = 'center';
+            container.style.display = 'inline-block';
+
+            // clone biar gak ganggu tabel asli
+            if (jadwalTable) {
+                const jadwalClone = jadwalTable.cloneNode(true);
+                container.appendChild(jadwalClone);
+            }
+            if (patnerTable) {
+                const patnerClone = patnerTable.cloneNode(true);
+                patnerClone.style.marginTop = '40px';
+                container.appendChild(patnerClone);
+            }
+
+            // tambahkan container ke body dulu
+            document.body.appendChild(container);
+
+            html2canvas(container).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'jadwal_asisten.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // hapus container setelah selesai
+                document.body.removeChild(container);
+            });
+        }
+        
+        function downloadExcel() {
+            fetch("/download_excel", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    jadwal: JSON.stringify(jadwal),
+                    patners: JSON.stringify(patners),
+                    nama: nama
+                })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = `Jadwal_${nama.replace(/\s+/g, '_')}.xlsx`;
+                link.click();
+            })
+            .catch(err => alert("Gagal mengunduh Excel: " + err));
+        }
+    </script>
     </body>
 </html>
