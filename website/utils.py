@@ -14,7 +14,6 @@ def read_file(input_file):
         return Document(io.BytesIO(input_file.read()))
     raise ValueError("Format file tidak didukung.")
 
-
 def find_asisten(input_file, nama_asisten):
     for table in input_file.tables:
         for row in table.rows:
@@ -109,9 +108,8 @@ def find_patners(all_schedules, target_name):
 def generate_excel(jadwal, patners, nama):
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Jadwal Ngawas"
+    ws.title = f"Jadwal Ngawas {nama[0].title()}"
 
-    # === Style setup ===
     fill_header = PatternFill("solid", fgColor="DCE6F1")
     fill_sesi = PatternFill("solid", fgColor="FCE4D6")
     border_medium = Border(
@@ -159,11 +157,11 @@ def generate_excel(jadwal, patners, nama):
             cell.border = border_medium
             cell.alignment = center
 
-    # === Tabel Patners (di bawah jadwal) ===
-    start_row = 4 + 2 + 3  # jeda 3 baris di bawah tabel jadwal
+    # === Tabel Patners ===
+    start_row = 9
     ws.merge_cells(f"A{start_row}:D{start_row}")
     ws[f"A{start_row}"] = "Daftar Patners"
-    ws[f"A{start_row}"].font = Font(bold=True, size=12)
+    ws[f"A{start_row}"].font = Font(bold=True, size=14)
     ws[f"A{start_row}"].alignment = center
 
     ws[f"A{start_row+1}"] = "Ruangan"
@@ -189,10 +187,9 @@ def generate_excel(jadwal, patners, nama):
     # === Lebar kolom otomatis ===
     for col in range(1, total_kolom + 1):
         letter = get_column_letter(col)
-        ws.column_dimensions[letter].width = 14
+        ws.column_dimensions[letter].width = 20
 
-    ws.column_dimensions["A"].width = 20
-    ws.column_dimensions["B"].width = 50
+    ws.column_dimensions["A"].width = 30
 
     output = BytesIO()
     wb.save(output)
