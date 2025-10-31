@@ -101,7 +101,7 @@
                 {% endfor %}
             </table>
         {% endif %}
-        <button onclick="downloadPNG()">Download Jadwal sebagai PNG</button>
+        <button onclick="downloadPNG()">Download PNG</button>
         <button onclick="downloadExcel()">Download Excel</button>      
     {% endif %}
     </form>
@@ -139,7 +139,7 @@
 
             html2canvas(container).then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'jadwal_asisten.png';
+                link.download = `Jadwal_${nama.replace(/\s+/g, '_')}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
 
