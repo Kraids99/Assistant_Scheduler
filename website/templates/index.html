@@ -1,172 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assistant Scheduler</title>
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-        }
+    <link rel="stylesheet" href="../static/main.css" />
+  </head>
+  <body>
+    <div class="header">
+      <h1>Sistem Assistant Scheduler</h1>
+      <p>
+        Input data jadwal dan nama asisten pengawas untuk menghasilkan jadwal
+        dalam format png/excel
+      </p>
+    </div>
 
-        form {
-            padding: 20px;
-            border-radius: 20px;
-        }
+    <div class="convert-pdf">
+      <a href="https://www.ilovepdf.com/id/pdf-ke-word" target="_blank">
+        <span class="icon">🔄️</span>
+        <span class="text">Konversi PDF ke Word -></span>
+      </a>
+    </div>
 
-        input[type="file"], input[type="text"] {
-            padding: 8px;
-            margin: 10px;
-            border: 1px solid grey;
-            border-radius: 6px;
-            width: 250px;
-        }
+    <div class="container">
+      <form
+        method="POST"
+        action="/proses"
+        enctype="multipart/form-data"
+        id="schedulerForm"
+      >
+        <div class="box">
+          <h2>Input Data Jadwal</h2>
 
-        button {
-            background: lightblue;
-            padding: 10px 20px;
-            color: white;
-            border-radius: 6px;
-        }
+          <div class="form-group">
+            <label for="file">File Jadwal</label>
+            <div class="upload-area" id="uploadArea">
+              <label for="file" class="upload-btn" id="uploadBtn"
+                >📄 Pilih File Jadwal
+              </label>
+              <p class="upload-format">Format: .docx</p>
+              <div class="file-info" id="fileInfo">
+                <div class="file-details">
+                  <div class="file-name" id="fileName"></div>
+                  <div class="file-size" id="fileSize"></div>
+                </div>
+              </div>
+            </div>
+            <input
+              type="file"
+              id="file"
+              name="file"
+              class="file-input"
+              accept=".docx"
+              required
+            />
+          </div>
 
-        table {
-            border-collapse: collapse;
-            margin: 30px auto;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
+          <div class="form-group">
+            <label for="nama_asisten">Nama Asisten</label>
+            <input
+              type="text"
+              id="nama_asisten"
+              name="nama_asisten"
+              placeholder="Masukkan nama asisten"
+            />
+          </div>
 
-        th, td {
-            border: 1px solid black;
-            padding: 8px 12px;
-            text-align: center;
-        }
+          <button type="submit" class="submit-btn">🔍Tampilkan Jadwal</button>
+        </div>
+      </form>
 
-        th {
-            background: lightblue;
-            color: black;
-        }
+      {% if cekAsisten %}
+      <h2 class="result-title">Jadwal Ngawas</h2>
+      <h3 class="asissten-name">{{ nama }}</h3>
+      <div class="badge-container">
+        <div class="info-badge">Total Jadwal: {{ total_sesi }} Sesi</div>
+      </div>
 
-    </style>
-</head>
-<body>
-    <h1>Assistant Scheduler</h1>
-    <a href=https://www.ilovepdf.com/id/pdf-ke-word>convert pdf to word?</a> 
-    <form method="POST" action="/proses" enctype="multipart/form-data">
-        <input type="file" name="file" accept=".docx , .pdf" required><br>
-        <input type="text" name="nama_asisten" placeholder="Masukkan nama asisten" required><br>
-        <button type="submit">Tampilkan Jadwal</button>
-    
-
-    {% if cekAsisten %}
-        <h2>Jadwal Ngawas {{ nama }}</h2>
-
+      <div class="table-container">
         <table id="jadwalTable">
-            <tr>
-                <th>Sesi/Tanggal</th>
-                {% for j in jadwal %}
-                    <th>{{ j.tanggal }}</th>
-                {% endfor %}
-            </tr>
-
-            {% for s_idx in range(4) %}
-                <tr>
-                    <td>{{ s_idx + 1 }}</td>
-                    {% for j in jadwal %}
-                        <td>{{ j.sesi[s_idx] }}</td>
-                    {% endfor %}
-                </tr>
+          <tr>
+            <th>Sesi/Tanggal</th>
+            {% for j in jadwal %}
+            <th>{{ j.tanggal }}</th>
             {% endfor %}
+          </tr>
+
+          {% for s_idx in range(4) %}
+          <tr>
+            <td><strong>Sesi {{ s_idx + 1 }}</strong></td>
+            {% for j in jadwal %}
+            <td>{{ j.sesi[s_idx] }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
         </table>
+      </div>
 
-        {% if patners %}
-            <h2 style="margin-top:40px;">Daftar Patners</h2>
-            <table id="patnerTable">
-                <tr>
-                    <th>Ruangan</th>
-                    <th>Patners</th>
-                </tr>
-                {% for p in patners %}
-                    <tr>
-                        <td>{{ p.ruangan }}</td>
-                        <td>
-                            {% if p.patners[0] == "-" %}
-                                -
-                            {% else %}
-                                {{ ", ".join(p.patners) }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-        {% endif %}
+      {% if patners %}
+      <h2 class="result-title">👥 Daftar Partners</h2>
+
+      <div class="table-container">
+        <table id="patnerTable">
+          <tr>
+            <th>Ruangan</th>
+            <th>Partners</th>
+          </tr>
+          {% for p in patners %}
+          <tr>
+            <td>
+              <strong>{{ p.ruangan }}</strong>
+            </td>
+            <td>
+              {% if p.patners[0] == "-" %} - {% else %} {{ ", ".join(p.patners)
+              }} {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endif %}
+
+      <div class="download-buttons">
         <button onclick="downloadPNG()">Download PNG</button>
-        <button onclick="downloadExcel()">Download Excel</button>      
-    {% endif %}
-    </form>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    
-    <script>
-        const nama = `{{ nama }}`;
-        const jadwal = JSON.parse(`{{ jadwal | tojson | safe }}`);
-        const patners = JSON.parse(`{{ patners | tojson | safe }}`);
+        <button onclick="downloadExcel()">Download Excel</button>
+      </div>
+      {% endif %}
+    </div>
 
-        function downloadPNG() {
-            const jadwalTable = document.querySelector('#jadwalTable');
-            const patnerTable = document.querySelector('#patnerTable');
-
-            // buat container kosong sementara
-            const container = document.createElement('div');
-            container.style.background = 'white';
-            container.style.padding = '20px';
-            container.style.textAlign = 'center';
-            container.style.display = 'inline-block';
-
-            // clone biar gak ganggu tabel asli
-            if (jadwalTable) {
-                const jadwalClone = jadwalTable.cloneNode(true);
-                container.appendChild(jadwalClone);
-            }
-            if (patnerTable) {
-                const patnerClone = patnerTable.cloneNode(true);
-                patnerClone.style.marginTop = '40px';
-                container.appendChild(patnerClone);
-            }
-
-            // tambahkan container ke body dulu
-            document.body.appendChild(container);
-
-            html2canvas(container).then(canvas => {
-                const link = document.createElement('a');
-                link.download = `Jadwal_${nama.replace(/\s+/g, '_')}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-
-                // hapus container setelah selesai
-                document.body.removeChild(container);
-            });
-        }
-        
-        function downloadExcel() {
-            fetch("/download_excel", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: new URLSearchParams({
-                    jadwal: JSON.stringify(jadwal),
-                    patners: JSON.stringify(patners),
-                    nama: nama
-                })
-            })
-            .then(response => response.blob())
-            .then(blob => {
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = `Jadwal_${nama.replace(/\s+/g, '_')}.xlsx`;
-                link.click();
-            })
-            .catch(err => alert("Gagal mengunduh Excel: " + err));
-        }
+    <script id="app-data" type="application/json">
+      {{ {"nama": nama|default("", true),
+          "jadwal": jadwal|default([], true),
+          "patners": patners|default([], true)} | tojson }}
     </script>
-    </body>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+    <script src="../static/main.js"></script>
+  </body>
 </html>

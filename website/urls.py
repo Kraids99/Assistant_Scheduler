@@ -29,7 +29,12 @@ def proses():
 
     patners = find_patners(schedules, nama_asisten)
     
-    return render_template('index.html',cekAsisten=cekAsisten,jadwal=jadwal or [],patners=patners or [],nama=nama_asisten.title())
+    def filled(x): 
+        return (x or '').strip() not in ('', '-')
+
+    total_sesi = sum(sum(1 for s in j["sesi"] if filled(s)) for j in jadwal)
+
+    return render_template('index.html',cekAsisten=cekAsisten,jadwal=jadwal or [],patners=patners or [],nama=nama_asisten.title(), total_sesi=total_sesi)
 
 @urls.route('/download_excel', methods=['POST'])
 def download_excel():
