@@ -137,7 +137,7 @@ fileInput.addEventListener("change", (e) => {
 //     .catch((err) => alert("Gagal mengunduh Excel: " + err));
 // }
 
-// Ambil data dari <script id="app-data">
+// ambil data dari <script id="app-data">
 const raw = document.getElementById("app-data")?.textContent || "{}";
 let APP = {};
 try {
@@ -151,12 +151,12 @@ const nama = (APP.nama || "").toString();
 const jadwal = Array.isArray(APP.jadwal) ? APP.jadwal : [];
 const patners = Array.isArray(APP.patners) ? APP.patners : [];
 
-// --------- Download PNG ----------
+// download PNG
 function downloadPNG() {
   const jadwalTable = document.querySelector("#jadwalTable");
   const patnerTable = document.querySelector("#patnerTable");
 
-  // Bungkus sementara untuk dirender html2canvas
+  // bungkus sementara untuk dirender html2canvas
   const container = document.createElement("div");
   container.style.background = "#ffffff";
   container.style.padding = "30px";
@@ -165,20 +165,20 @@ function downloadPNG() {
   container.style.fontFamily =
     "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 
-  // Judul
+  // judul
   const title = document.createElement("h2");
   title.textContent = `Jadwal Ngawas ${nama || ""}`.trim();
   title.style.color = "#667eea";
   title.style.marginBottom = "18px";
   container.appendChild(title);
 
-  // Clone tabel jadwal
+  // clone tabel jadwal
   if (jadwalTable) {
     const jadwalClone = jadwalTable.cloneNode(true);
     container.appendChild(jadwalClone);
   }
 
-  // Clone tabel partners (jika ada)
+  // clone tabel partners (jika ada)
   if (patnerTable) {
     const partnerTitle = document.createElement("h3");
     partnerTitle.textContent = "Daftar Partners";
@@ -209,7 +209,7 @@ function downloadPNG() {
     });
 }
 
-// Download Excel
+// download Excel
 function downloadExcel() {
   const body = new URLSearchParams({
     jadwal: JSON.stringify(jadwal),
@@ -240,6 +240,6 @@ function downloadExcel() {
     });
 }
 
-// Ekspor ke global supaya bisa dipanggil dari onclick di HTML
+// ekspor ke global supaya bisa dipanggil dari onclick di HTML
 window.downloadPNG = downloadPNG;
 window.downloadExcel = downloadExcel;
