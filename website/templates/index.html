@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Assistant Scheduler</title>
+    <!-- <link rel="icon" type="image/png" href="../static/assest/"> -->
     <link rel="stylesheet" href="../static/main.css" />
   </head>
   <body>
     <div class="header">
-      <h1>Sistem Assistant Scheduler</h1>
+      <h1>Assistant Scheduler</h1>
       <p>
-        Input data jadwal dan nama asisten pengawas untuk menghasilkan jadwal
-        dalam format png/excel
+        Sistem yang membantu asisten pengawas untuk menghasilkan jadwal mengawas
       </p>
     </div>
 
@@ -35,9 +35,7 @@
           <div class="form-group">
             <label for="file">File Jadwal</label>
             <div class="upload-area" id="uploadArea">
-              <label for="file" class="upload-btn" id="uploadBtn"
-                >📄 Pilih File Jadwal
-              </label>
+              <label for="file" class="upload-btn" id="uploadBtn">📄 Pilih File Jadwal</label>
               <p class="upload-format">Format: .docx</p>
               <div class="file-info" id="fileInfo">
                 <div class="file-details">
@@ -69,73 +67,10 @@
           <button type="submit" class="submit-btn">🔍Tampilkan Jadwal</button>
         </div>
       </form>
-
-      {% if cekAsisten %}
-      <h2 class="result-title">Jadwal Ngawas</h2>
-      <h3 class="asissten-name">{{ nama }}</h3>
-      <div class="badge-container">
-        <div class="info-badge">Total Jadwal: {{ total_sesi }} Sesi</div>
       </div>
-
-      <div class="table-container">
-        <table id="jadwalTable">
-          <tr>
-            <th>Sesi/Tanggal</th>
-            {% for j in jadwal %}
-            <th>{{ j.tanggal }}</th>
-            {% endfor %}
-          </tr>
-
-          {% for s_idx in range(4) %}
-          <tr>
-            <td><strong>Sesi {{ s_idx + 1 }}</strong></td>
-            {% for j in jadwal %}
-            <td>{{ j.sesi[s_idx] }}</td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </table>
+      <div class="footer">
+        <p>&copy; Assistant Scheduler Created by Kraids and Lyoko</p>
       </div>
-
-      {% if patners %}
-      <h2 class="result-title">👥 Daftar Partners</h2>
-
-      <div class="table-container">
-        <table id="patnerTable">
-          <tr>
-            <th>Ruangan</th>
-            <th>Partners</th>
-          </tr>
-          {% for p in patners %}
-          <tr>
-            <td>
-              <strong>{{ p.ruangan }}</strong>
-            </td>
-            <td>
-              {% if p.patners[0] == "-" %} - {% else %} {{ ", ".join(p.patners)
-              }} {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </table>
-      </div>
-      {% endif %}
-
-      <div class="download-buttons">
-        <button onclick="downloadPNG()">Download PNG</button>
-        <button onclick="downloadExcel()">Download Excel</button>
-      </div>
-      {% endif %}
-    </div>
-
-    <script id="app-data" type="application/json">
-      {{ {"nama": nama|default("", true),
-          "jadwal": jadwal|default([], true),
-          "patners": patners|default([], true)} | tojson }}
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
     <script src="../static/main.js"></script>
   </body>
 </html>

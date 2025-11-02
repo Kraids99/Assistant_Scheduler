@@ -6,6 +6,46 @@ import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
+bulan_pattern = re.compile(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)", re.IGNORECASE)
+
+def is_docx(input_file):
+    name = input_file.filename.lower()
+    if name.endswith('.docx'):
+        return True
+    return False
+
+def is_valid_jadwal(file):
+    try:
+        doc = Document(file)
+
+        tables = doc.tables
+        if not tables:
+            return False
+        
+        print("1")
+
+        first_table = tables[0]
+        header_rows = first_table.rows[:2] if len(first_table.rows) >= 2 else first_table.rows[:1]
+        headers = [cell.text.strip().lower() for r in header_rows for cell in r.cells]
+
+        if not any("nama" in h for h in headers):
+            return False
+        if not any("npm" in h or "npm asisten" in h for h in headers):
+            return False
+
+        print("2")
+
+        has_bulan = any(bulan_pattern.search(h) for h in headers)
+        if not has_bulan:
+            return False
+        
+        print("3")
+        
+        return True
+
+    except Exception as e:
+        return False
+
 def read_file(input_file):
     name = input_file.filename.lower()
 
@@ -21,8 +61,6 @@ def find_asisten(input_file, nama_asisten):
             if nama_asisten.lower() in row_text:
                 return True
     return False
-
-bulan_pattern = re.compile(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)", re.IGNORECASE)
 
 def all_schedules(input_file):
     all_schedules = []
@@ -127,7 +165,7 @@ def generate_excel(jadwal, patners, nama):
 
     # === Judul utama ===
     ws.merge_cells(f"A1:{last_col_letter}1")
-    ws["A1"] = f"Jadwal Ngawas {nama.title()}"
+    ws["A1"] = f"Jadwal Mengawas - {nama.title()}"
     ws["A1"].font = Font(size=14, bold=True)
     ws["A1"].alignment = center
 

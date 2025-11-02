@@ -7,61 +7,62 @@ const fileSize = document.getElementById("fileSize");
 
 let storedFile = null;
 
+if (fileInput && uploadArea) {
 // mengubah ukuran dalam byte
-function formatFileSize(bytes) {
-  if (bytes === 0) return "0 Bytes";
-  // basis konversi (1 KB = 1024 Bytes).
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  // menentukan index unit yang tepat berdasarkan besar bytes ("Bytes", "KB", "MB", "GB").
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  function formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    // basis konversi (1 KB = 1024 Bytes).
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    // menentukan index unit yang tepat berdasarkan besar bytes ("Bytes", "KB", "MB", "GB").
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  }
+
+  // Drag and drop
+  uploadArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    uploadArea.classList.add("dragover");
+  });
+
+  uploadArea.addEventListener("dragleave", () => {
+    uploadArea.classList.remove("dragover");
+  });
+
+  uploadArea.addEventListener("drop", (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove("dragover");
+
+    if (e.dataTransfer.files.length > 0) {
+      fileInput.files = e.dataTransfer.files;
+      fileInput.dispatchEvent(new Event("change"));
+    }
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length > 0) {
+      const file = e.target.files[0];
+
+      storedFile = file;
+
+      // Update file info
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileInfo.classList.add("show");
+      uploadArea.classList.add("file-selected");
+
+      // text format
+      uploadArea.querySelector(".upload-format").style.marginTop = "0px";
+      uploadArea.querySelector(".upload-format").style.marginBottom = "15px";
+
+      // Animasi
+      uploadArea.style.transform = "scale(1.02)";
+      setTimeout(() => {
+        uploadArea.style.transform = "scale(1)";
+      }, 200);
+    }
+  });
 }
-
-// Drag and drop
-uploadArea.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  uploadArea.classList.add("dragover");
-});
-
-uploadArea.addEventListener("dragleave", () => {
-  uploadArea.classList.remove("dragover");
-});
-
-uploadArea.addEventListener("drop", (e) => {
-  e.preventDefault();
-  uploadArea.classList.remove("dragover");
-
-  if (e.dataTransfer.files.length > 0) {
-    fileInput.files = e.dataTransfer.files;
-    fileInput.dispatchEvent(new Event("change"));
-  }
-});
-
-fileInput.addEventListener("change", (e) => {
-  if (e.target.files.length > 0) {
-    const file = e.target.files[0];
-
-    storedFile = file;
-
-    // Update file info
-    fileName.textContent = file.name;
-    fileSize.textContent = formatFileSize(file.size);
-    fileInfo.classList.add("show");
-    uploadArea.classList.add("file-selected");
-
-    // text format
-    uploadArea.querySelector(".upload-format").style.marginTop = "0px";
-    uploadArea.querySelector(".upload-format").style.marginBottom = "15px";
-
-    // Animasi
-    uploadArea.style.transform = "scale(1.02)";
-    setTimeout(() => {
-      uploadArea.style.transform = "scale(1)";
-    }, 200);
-  }
-});
-
 // Download functions
 // const nama = `{{ nama }}`;
 // const jadwal = JSON.parse(`{{ jadwal | tojson | safe }}`);
@@ -166,10 +167,12 @@ function downloadPNG() {
     "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 
   // judul
-  const title = document.createElement("h2");
-  title.textContent = `Jadwal Ngawas ${nama || ""}`.trim();
-  title.style.color = "#667eea";
-  title.style.marginBottom = "18px";
+  const title = document.createElement("h1");
+  title.textContent = `Jadwal Mengawas - ${nama || ""}`.trim();
+  title.style.color = "black";
+  title.style.marginBottom = "12px";
+  title.style.fontWeight = "bold";
+  title.style.fontSize = "22px";
   container.appendChild(title);
 
   // clone tabel jadwal
@@ -180,11 +183,13 @@ function downloadPNG() {
 
   // clone tabel partners (jika ada)
   if (patnerTable) {
-    const partnerTitle = document.createElement("h3");
+    const partnerTitle = document.createElement("h1");
     partnerTitle.textContent = "Daftar Partners";
-    partnerTitle.style.color = "#667eea";
+    partnerTitle.style.color = "black";
     partnerTitle.style.marginTop = "26px";
     partnerTitle.style.marginBottom = "12px";
+    partnerTitle.style.fontWeight = "bold";
+    partnerTitle.style.fontSize = "22px";
     container.appendChild(partnerTitle);
 
     const patnerClone = patnerTable.cloneNode(true);

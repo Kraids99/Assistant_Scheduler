@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Assistant Scheduler</title>
+      <link rel="stylesheet" href="../static/main.css" />
+  </head>
+  <body>
+    <div class="container">
+
+      {% if isDocx %}
+        {% if isValid %}
+          {% if cekAsisten %}
+          <h2 class="result-title">📅 Jadwal Mengawas</h2>
+          <h3 class="asissten-name">{{ nama }}</h3>
+          <div class="badge-container">
+            <div class="info-badge">Total Jadwal: {{ total_sesi }} Sesi</div>
+          </div>
+
+          <div class="table-container">
+            <table id="jadwalTable">
+              <tr>
+                <th>Sesi/Tanggal</th>
+                {% for j in jadwal %}
+                <th>{{ j.tanggal }}</th>
+                {% endfor %}
+              </tr>
+
+              {% for s_idx in range(4) %}
+              <tr>
+                <td><strong>Sesi {{ s_idx + 1 }}</strong></td>
+                {% for j in jadwal %}
+                <td>{{ j.sesi[s_idx] }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </table>
+          </div>
+
+          {% if patners %}
+          <h2 class="result-title">🤝 Daftar Partners</h2>
+
+          <div class="table-container">
+            <table id="patnerTable">
+              <tr>
+                <th>Ruangan</th>
+                <th>Partners</th>
+              </tr>
+              {% for p in patners %}
+              <tr>
+                <td>
+                  <strong>{{ p.ruangan }}</strong>
+                </td>
+                <td>
+                  {% if p.patners[0] == "-" %} - {% else %} {{ ", ".join(p.patners)
+                  }} {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </table>
+          </div>
+          {% endif %}
+
+          <div class="download-buttons">
+            <button onclick="downloadPNG()">Download PNG</button>
+            <button onclick="downloadExcel()">Download Excel</button>
+          </div>
+          {% else %}
+            <div class="error-box">
+              <h2>❌ Asisten Tidak Ditemukan</h2>
+              <p>{{ error_msg }}</p>
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="error-box">
+              <h2>❌ File Tidak Valid</h2>
+              <p>{{ error_msg }}</p>
+            </div>
+        {% endif %}
+      {% else %}
+        <div class="error-box">
+          <h2>❌ Format File Salah</h2>
+          <p>{{ error_msg }}</p>
+        </div>
+      {% endif %}
+      <div class="back-container">
+          <a href="/" class="back-btn">Kembali</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>&copy; Assistant Scheduler Created by Kraids and Lyoko</p>
+    </div>
+    <script id="app-data" type="application/json">
+      {{ {"nama": nama|default("", true),
+          "jadwal": jadwal|default([], true),
+          "patners": patners|default([], true)} | tojson }}
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="../static/main.js"></script>
+  </body>
+</html>
