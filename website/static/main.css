@@ -398,7 +398,7 @@ tr:hover td {
 }
 
 .back-container .back-btn {
-  background: linear-gradient(45deg, #27ae60, #2ecc71);
+  background: linear-gradient(45deg, #e74c3c, #ff6b6b);
   color: white;
   padding: 14px 35px;
   font-size: 1.1rem;
@@ -408,13 +408,13 @@ tr:hover td {
   display: inline-block;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
   margin: 0 10px;
 }
 
 .back-container .back-btn:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
 }
 
 /* ERROR */
