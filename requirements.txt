@@ -1,0 +1,6 @@
+Flask
+openpyxl
+docx
+json
+re
+io
