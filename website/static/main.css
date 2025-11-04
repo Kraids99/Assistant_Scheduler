@@ -31,7 +31,16 @@ body {
 .header p {
   font-size: 1.1rem;
   opacity: 0.9;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.header notes {
+  font-size: 1.1rem;
+  opacity: 0.9;
   margin-bottom: 20px;
+  color: lightpink; 
+  font-weight: bold;
 }
 
 .convert-pdf {
