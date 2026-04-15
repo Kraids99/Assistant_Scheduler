@@ -3,116 +3,218 @@ import io
 from io import BytesIO
 import re
 import openpyxl
+import pdfplumber
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-bulan_pattern = re.compile(r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)", re.IGNORECASE)
+bulan_pattern = re.compile(
+    r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Mei|Agu|Okt|Des)",
+    re.IGNORECASE,
+)
 
-def is_docx(input_file):
-    name = input_file.filename.lower()
-    if name.endswith('.docx'):
-        return True
+
+def _clean_text(value):
+    if value is None:
+        return ""
+    text = str(value).replace("\n", " ").replace("\r", " ").strip()
+    return re.sub(r"\s+", " ", text)
+
+
+def _normalize_date(value):
+    text = _clean_text(value)
+    return text.replace("\u2010", "-").replace("\u2013", "-")
+
+
+def is_dark_fill(cell):
+    try:
+        shading = cell._element.xpath(".//w:shd")
+        if shading:
+            fill = shading[0].get("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill")
+            if fill and fill.lower() in ["000000", "1f1f1f", "222222", "2e2e2e", "444444"]:
+                return True
+    except Exception:
+        pass
     return False
 
-def is_valid_jadwal(file):
-    try:
-        doc = Document(file)
 
-        tables = doc.tables
-        if not tables:
-            return False
-        
-        print("1")
+def detect_file_type(input_file):
+    name = (input_file.filename or "").lower()
+    if name.endswith(".docx"):
+        return "docx"
+    if name.endswith(".pdf"):
+        return "pdf"
+    if name.endswith(".xlsx") or name.endswith(".xls"):
+        return "excel"
+    return None
 
-        first_table = tables[0]
-        header_rows = first_table.rows[:2] if len(first_table.rows) >= 2 else first_table.rows[:1]
-        headers = [cell.text.strip().lower() for r in header_rows for cell in r.cells]
 
-        if not any("nama" in h for h in headers):
-            return False
-        if not any("npm" in h or "npm asisten" in h for h in headers):
-            return False
+def is_supported_file(input_file):
+    return detect_file_type(input_file) in {"docx", "pdf", "excel"}
 
-        print("2")
 
-        has_bulan = any(bulan_pattern.search(h) for h in headers)
-        if not has_bulan:
-            return False
-        
-        print("3")
-        
-        return True
+def is_docx(input_file):
+    return detect_file_type(input_file) == "docx"
 
-    except Exception as e:
-        return False
 
 def read_file(input_file):
-    name = input_file.filename.lower()
-
-    if name.endswith('.docx'):
+    file_type = detect_file_type(input_file)
+    if file_type == "docx":
         input_file.seek(0)
         return Document(io.BytesIO(input_file.read()))
     raise ValueError("Format file tidak didukung.")
 
-def find_asisten(input_file, nama_asisten):
-    for table in input_file.tables:
+
+def _extract_date_columns(header_cells):
+    date_cols = []
+    for idx, raw in enumerate(header_cells):
+        cell = _normalize_date(raw)
+        if not cell or not bulan_pattern.search(cell):
+            continue
+        if date_cols and idx - date_cols[-1][0] < 4:
+            continue
+        date_cols.append((idx, cell))
+    return date_cols
+
+
+def _detect_name_col(header_cells):
+    for idx, cell in enumerate(header_cells):
+        if "nama" in _clean_text(cell).lower():
+            return idx
+    return 1
+
+
+def _build_schedules_from_rows(rows):
+    schedules = []
+    name_col = 1
+    date_cols = []
+
+    for row in rows:
+        lowered = [_clean_text(c).lower() for c in row]
+        has_nama = any("nama" in c for c in lowered)
+        has_npm = any("npm" in c for c in lowered)
+        found_dates = _extract_date_columns(row)
+
+        if has_nama and (has_npm or found_dates):
+            name_col = _detect_name_col(row)
+            date_cols = found_dates
+            break
+
+        if not date_cols and found_dates:
+            date_cols = found_dates
+
+    if not date_cols:
+        return schedules
+
+    for row in rows:
+        if len(row) <= name_col:
+            continue
+
+        nama = _clean_text(row[name_col]).lower()
+        if not nama or nama == "nama":
+            continue
+
+        jadwal = []
+        any_slot_filled = False
+
+        for start_col, tanggal in date_cols:
+            sesi = []
+            for offset in range(4):
+                col = start_col + offset
+                val = _clean_text(row[col]) if col < len(row) else ""
+                if val:
+                    any_slot_filled = True
+                sesi.append(val if val else "-")
+            jadwal.append({"tanggal": tanggal, "sesi": sesi})
+
+        if jadwal and any_slot_filled:
+            schedules.append({"nama": nama, "jadwal": jadwal})
+
+    return schedules
+
+
+def _all_schedules_docx(input_docx):
+    schedules = []
+    for table in input_docx.tables:
+        rows = []
         for row in table.rows:
-            row_text = " ".join(cell.text.strip().lower() for cell in row.cells)
-            if nama_asisten.lower() in row_text:
-                return True
-    return False
+            cells = []
+            for c in row.cells:
+                text = _clean_text(c.text)
+                if is_dark_fill(c) and not text:
+                    cells.append("")
+                else:
+                    cells.append(text)
+            if any(cells):
+                rows.append(cells)
+
+        if rows:
+            schedules.extend(_build_schedules_from_rows(rows))
+
+    return schedules
+
+
+def _all_schedules_pdf(input_file):
+    schedules = []
+    input_file.seek(0)
+    file_bytes = input_file.read()
+
+    with pdfplumber.open(BytesIO(file_bytes)) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables() or []:
+                rows = []
+                for row in table:
+                    if not row:
+                        continue
+                    cells = [_clean_text(c) for c in row]
+                    if any(cells):
+                        rows.append(cells)
+
+                if rows:
+                    schedules.extend(_build_schedules_from_rows(rows))
+
+    return schedules
+
+
+def _all_schedules_excel(input_file):
+    schedules = []
+    input_file.seek(0)
+    file_bytes = input_file.read()
+
+    workbook = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
+    for sheet in workbook.worksheets:
+        rows = []
+        for row in sheet.iter_rows(values_only=True):
+            cells = [_clean_text(c) for c in row]
+            if any(cells):
+                rows.append(cells)
+
+        if rows:
+            schedules.extend(_build_schedules_from_rows(rows))
+
+    return schedules
+
 
 def all_schedules(input_file):
-    all_schedules = []
-    bulan_pattern = re.compile(
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|"
-        r"Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)",
-        re.IGNORECASE
-    )
+    file_type = detect_file_type(input_file)
+    if file_type == "docx":
+        return _all_schedules_docx(read_file(input_file))
+    if file_type == "pdf":
+        return _all_schedules_pdf(input_file)
+    if file_type == "excel":
+        return _all_schedules_excel(input_file)
+    return []
 
-    for table in input_file.tables:
-        # cari baris tanggal
-        tanggal_header = []
-        for r in table.rows:
-            cells = [c.text.strip() for c in r.cells]
-            if any(bulan_pattern.search(c) for c in cells):
-                tanggal_header = [t for t in cells if bulan_pattern.search(t)]
-                tanggal_header = list(dict.fromkeys(tanggal_header))
-                break
 
-        if not tanggal_header:
-            continue  # lewati tabel tanpa tanggal
+def is_valid_jadwal(file):
+    try:
+        return len(all_schedules(file)) > 0
+    except Exception:
+        return False
 
-        # proses semua baris nama asisten
-        for row in table.rows:
-            cells = [c.text.strip() for c in row.cells]
-            if len(cells) < 6 or not cells[1] or cells[1].lower() == "nama":
-                continue
 
-            nama = cells[1].lower()
-            ruangan_data = cells[5:]
-            if not ruangan_data:
-                continue
+def find_asisten(schedules, nama_asisten):
+    return any(a["nama"].lower() == nama_asisten.lower() for a in schedules)
 
-            per_tanggal = len(ruangan_data) // len(tanggal_header)
-            jadwal = []
-
-            for i, tanggal in enumerate(tanggal_header):
-                start = i * per_tanggal
-                end = start + 4
-                sesi_data = ruangan_data[start:end]
-                sesi_fix = [s if s else "-" for s in sesi_data]
-                jadwal.append({
-                    "tanggal": tanggal,
-                    "sesi": sesi_fix
-                })
-
-            all_schedules.append({
-                "nama": nama,
-                "jadwal": jadwal
-            })
-
-    return all_schedules
 
 def find_patners(all_schedules, target_name):
     target = next((a for a in all_schedules if a["nama"].lower() == target_name.lower()), None)
@@ -127,7 +229,6 @@ def find_patners(all_schedules, target_name):
                 continue
 
             patners = []
-            # cek asisten lain
             for other in all_schedules:
                 if other["nama"].lower() == target_name.lower():
                     continue
@@ -138,10 +239,11 @@ def find_patners(all_schedules, target_name):
 
             hasil.append({
                 "ruangan": f"{tanggal} | Sesi {sesi_idx+1} | {ruang}",
-                "patners": patners if patners else ["-"]
+                "patners": patners if patners else ["-"],
             })
 
     return hasil
+
 
 def generate_excel(jadwal, patners, nama):
     wb = openpyxl.Workbook()
@@ -154,22 +256,19 @@ def generate_excel(jadwal, patners, nama):
         left=Side(style="medium", color="000000"),
         right=Side(style="medium", color="000000"),
         top=Side(style="medium", color="000000"),
-        bottom=Side(style="medium", color="000000")
+        bottom=Side(style="medium", color="000000"),
     )
     center = Alignment(horizontal="center", vertical="center")
 
-    # === Dinamis: jumlah kolom berdasarkan tanggal ===
     total_tanggal = len(jadwal)
-    total_kolom = total_tanggal + 1  # kolom pertama = Sesi/Tanggal
+    total_kolom = total_tanggal + 1
     last_col_letter = get_column_letter(total_kolom)
 
-    # === Judul utama ===
     ws.merge_cells(f"A1:{last_col_letter}1")
     ws["A1"] = f"Jadwal Mengawas - {nama.title()}"
     ws["A1"].font = Font(size=14, bold=True)
     ws["A1"].alignment = center
 
-    # === Header jadwal ===
     ws["A2"] = "Sesi / Tanggal"
     ws["A2"].fill = fill_header
     ws["A2"].font = Font(bold=True)
@@ -183,7 +282,6 @@ def generate_excel(jadwal, patners, nama):
         c.alignment = center
         c.border = border_medium
 
-    # === Isi jadwal ===
     for s_idx in range(4):
         sesi_cell = ws.cell(row=3 + s_idx, column=1, value=f"{s_idx + 1}")
         sesi_cell.fill = fill_sesi
@@ -195,7 +293,6 @@ def generate_excel(jadwal, patners, nama):
             cell.border = border_medium
             cell.alignment = center
 
-    # === Tabel Patners ===
     start_row = 9
     ws.merge_cells(f"A{start_row}:D{start_row}")
     ws[f"A{start_row}"] = "Daftar Patners"
@@ -205,7 +302,7 @@ def generate_excel(jadwal, patners, nama):
     ws[f"A{start_row+1}"] = "Ruangan"
     ws.merge_cells(f"B{start_row+1}:D{start_row+1}")
     ws[f"B{start_row+1}"] = "Patners"
-    for col in ["A", "B", "c", "D"]:
+    for col in ["A", "B", "C", "D"]:
         cell = ws[f"{col}{start_row+1}"]
         cell.fill = fill_header
         cell.font = Font(bold=True)
@@ -222,7 +319,6 @@ def generate_excel(jadwal, patners, nama):
             cell.border = border_medium
             cell.alignment = center
 
-    # === Lebar kolom otomatis ===
     for col in range(1, total_kolom + 1):
         letter = get_column_letter(col)
         ws.column_dimensions[letter].width = 20
@@ -233,56 +329,3 @@ def generate_excel(jadwal, patners, nama):
     wb.save(output)
     output.seek(0)
     return output
-
-# def schedule_table(input_file, nama_asisten):
-#     """
-#     Membaca tabel jadwal ngawas (format UTS besar).
-#     Output contoh:
-#     [{'tanggal': '20-Oct', 'sesi': ['3327', '-', '-', '-']}, ...]
-#     """
-#     result = []
-#     target_row = None
-#     tanggal_header = []
-
-#     for table in input_file.tables:
-#         # cari baris yang mengandung semua tanggal
-#         for r in table.rows:
-#             cells = [c.text.strip() for c in r.cells]
-#             if any(bulan_pattern.search(c) for c in cells):
-#                 # ambil semua tanggal unik
-#                 tanggal_header = [t for t in cells if bulan_pattern.search(t)]
-#                 tanggal_header = list(dict.fromkeys(tanggal_header))
-#                 break
-
-#         # cari baris nama asisten
-#         for row in table.rows:
-#             cells = [c.text.strip() for c in row.cells]
-#             if nama_asisten.lower() in " ".join(cells).lower():
-#                 target_row = cells
-#                 break
-
-#         if target_row:
-#             break
-
-#     if not target_row or not tanggal_header:
-#         return []
-
-#     # hitung offset kolom tanggal
-#     # di file kamu: kolom 0–4 = No, Nama, NPM, Prodi → mulai tanggal di kolom ke-5
-#     start_col = 5  
-#     ruangan_data = target_row[start_col:]
-
-#     # Bersihkan tanggal duplikat & kosong
-#     tanggal_header = [t for t in tanggal_header if t.strip()]
-#     tanggal_header = list(dict.fromkeys(tanggal_header))
-
-#     # Bagi data per tanggal (4 sesi per tanggal)
-#     per_tanggal = len(ruangan_data) // len(tanggal_header)
-#     for i, tanggal in enumerate(tanggal_header):
-#         start = i * per_tanggal
-#         end = start + 4
-#         sesi_data = ruangan_data[start:end]
-#         sesi_fix = [s if s else "-" for s in sesi_data]
-#         result.append({"tanggal": tanggal, "sesi": sesi_fix})
-
-#     return result
