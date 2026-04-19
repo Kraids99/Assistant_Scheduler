@@ -1,4 +1,4 @@
-from docx import Document
+﻿from docx import Document
 import io
 from io import BytesIO
 import re
@@ -83,9 +83,17 @@ def _detect_name_col(header_cells):
     return 1
 
 
+def _detect_npm_col(header_cells):
+    for idx, cell in enumerate(header_cells):
+        if "npm" in _clean_text(cell).lower():
+            return idx
+    return None
+
+
 def _build_schedules_from_rows(rows):
     schedules = []
     name_col = 1
+    npm_col = None
     date_cols = []
 
     for row in rows:
@@ -96,6 +104,9 @@ def _build_schedules_from_rows(rows):
 
         if has_nama and (has_npm or found_dates):
             name_col = _detect_name_col(row)
+            npm_col = _detect_npm_col(row)
+            if npm_col is None and len(row) > 2:
+                npm_col = 2
             date_cols = found_dates
             break
 
@@ -113,6 +124,10 @@ def _build_schedules_from_rows(rows):
         if not nama or nama == "nama":
             continue
 
+        npm = _clean_text(row[npm_col]).lower() if npm_col is not None and npm_col < len(row) else ""
+        if npm == "npm":
+            npm = ""
+
         jadwal = []
         any_slot_filled = False
 
@@ -127,7 +142,7 @@ def _build_schedules_from_rows(rows):
             jadwal.append({"tanggal": tanggal, "sesi": sesi})
 
         if jadwal and any_slot_filled:
-            schedules.append({"nama": nama, "jadwal": jadwal})
+            schedules.append({"nama": nama, "npm": npm, "jadwal": jadwal})
 
     return schedules
 
@@ -211,13 +226,16 @@ def is_valid_jadwal(file):
     except Exception:
         return False
 
+# def find_asisten(schedules, nama_asisten):
+#     return any(a["nama"].lower() == nama_asisten.lower() for a in schedules)
 
-def find_asisten(schedules, nama_asisten):
-    return any(a["nama"].lower() == nama_asisten.lower() for a in schedules)
+def find_asisten(schedules, npm):
+    target_npm = _clean_text(npm).lower()
+    return any(_clean_text(a.get("npm", "")).lower() == target_npm for a in schedules)
 
-
-def find_patners(all_schedules, target_name):
-    target = next((a for a in all_schedules if a["nama"].lower() == target_name.lower()), None)
+def find_patners(all_schedules, target_npm):
+    normalized_npm = _clean_text(target_npm).lower()
+    target = next((a for a in all_schedules if _clean_text(a.get("npm", "")).lower() == normalized_npm), None)
     if not target:
         return []
 
@@ -230,7 +248,7 @@ def find_patners(all_schedules, target_name):
 
             patners = []
             for other in all_schedules:
-                if other["nama"].lower() == target_name.lower():
+                if _clean_text(other.get("npm", "")).lower() == normalized_npm:
                     continue
                 for oj in other["jadwal"]:
                     if oj["tanggal"] == tanggal and oj["sesi"][sesi_idx] == ruang:

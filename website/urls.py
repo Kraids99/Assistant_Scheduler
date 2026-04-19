@@ -13,7 +13,7 @@ def index():
 @urls.route('/proses', methods=['POST'])
 def proses():
     file = request.files.get('file')
-    nama_asisten = request.form.get('nama_asisten', '').strip().lower()
+    npm_asisten = request.form.get('npm_asisten', '').strip()
 
     if not file or not file.filename:
         return render_template('jadwal.html', isDocx=False, error_msg='File belum dipilih.')
@@ -36,8 +36,16 @@ def proses():
         )
 
     schedules = all_schedules(file)
-    cek_asisten = find_asisten(schedules, nama_asisten)
-    jadwal = next((a['jadwal'] for a in schedules if a['nama'].lower() == nama_asisten), [])
+    cek_asisten = find_asisten(schedules, npm_asisten)
+    target_asisten = next(
+        (
+            a
+            for a in schedules
+            if str(a.get('npm', '')).strip().lower() == npm_asisten.lower()
+        ),
+        None,
+    )
+    jadwal = target_asisten['jadwal'] if target_asisten else []
 
     if not cek_asisten or not jadwal:
         return render_template(
@@ -45,10 +53,10 @@ def proses():
             isDocx=True,
             isValid=True,
             cekAsisten=False,
-            error_msg=f"Asisten bernama '{nama_asisten.title()}' tidak ditemukan di file jadwal.",
+            error_msg=f"Asisten dengan NPM '{npm_asisten}' tidak ditemukan di file jadwal.",
         )
 
-    patners = find_patners(schedules, nama_asisten)
+    patners = find_patners(schedules, npm_asisten)
 
     def filled(x):
         return (x or '').strip() not in ('', '-')
@@ -61,7 +69,8 @@ def proses():
         cekAsisten=True,
         jadwal=jadwal or [],
         patners=patners or [],
-        nama=nama_asisten.title(),
+        nama=(target_asisten.get('nama', '') if target_asisten else '').title(),
+        npm=npm_asisten,
         total_sesi=total_sesi,
     )
 

@@ -14,6 +14,9 @@
           {% if cekAsisten %}
           <h2 class="result-title">📅 Jadwal Mengawas</h2>
           <h3 class="asissten-name">{{ nama }}</h3>
+          {% if npm %}
+          <h3 class="asissten-name">{{ npm }}</h3>
+          {% endif %}
           <div class="badge-container">
             <div class="info-badge">Total Jadwal: {{ total_sesi }} Sesi</div>
           </div>
@@ -93,6 +96,7 @@
     </div>
     <script id="app-data" type="application/json">
       {{ {"nama": nama|default("", true),
+          "npm": npm|default("", true),
           "jadwal": jadwal|default([], true),
           "patners": patners|default([], true)} | tojson }}
     </script>
