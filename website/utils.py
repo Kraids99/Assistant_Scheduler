@@ -107,7 +107,9 @@ def _build_schedules_from_rows(rows):
             npm_col = _detect_npm_col(row)
             if npm_col is None and len(row) > 2:
                 npm_col = 2
-            date_cols = found_dates
+            # Some PDF tables split the date header and the NAMA/NPM header
+            # into separate rows, so keep previously detected date columns.
+            date_cols = found_dates or date_cols
             break
 
         if not date_cols and found_dates:
